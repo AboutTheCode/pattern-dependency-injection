@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+</head>
+<body>
+
+<script>
+
+  class ModelX {
+    constructor({ ModelS }) {
+      this.modelS = ModelS;
+    }
+  }
+  class ModelS {}
+
+  class Factory {
+    constructor({ ModelX, ModelS }) {
+      this.modelS = ModelS;
+      this.modelX = ModelX;
+    }
+  }
+
+  class DIContainer {
+    instances = {};
+
+    proxy = null;
+
+    parent = null;
+
+    static createRoot() {
+      const di = new DIContainer();
+      di.set('di', di);
+      return di;
+    }
+
+    constructor(parent = null) {
+      this.parent = parent;
+
+      this.proxy = new Proxy({}, {
+        get: (target, name) => this.get(name),
+        set: (target, name, value) => this.set(name, value)
+      });
+    }
+
+    set(name, value) {
+      this.instances[name] = value;
+    }
+
+    get(nameOrClass) {
+      const className = typeof nameOrClass === 'string' ? nameOrClass : nameOrClass.prototype.constructor.name;
+      if (this.instances[className]) {
+        return this.instances[className];
+      }
+      if (this.parent) {
+        return this.parent.get(nameOrClass);
+      }
+      try {
+        const clsConstr = typeof nameOrClass === 'string' ? eval(nameOrClass) : nameOrClass;
+        this.instances[className] = new clsConstr(this.proxy);
+        return this.instances[className];
+      } catch (err) {
+        // error in eval
+      }
+    }
+
+    scope() {
+      return new DIContainer(this);
+    }
+  }
+
+  const di = DIContainer.createRoot();
+  const factory = di.get(Factory);
+  console.info(factory);
+</script>
+</body>
+</html>
